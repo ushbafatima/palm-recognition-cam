@@ -1,6 +1,19 @@
 import cv2 as cv
 import os
 import time
+import mediapipe as mp
+
+import mediapipe as mp
+
+mp_hands = mp.solutions.hands
+mp_drawing = mp.solutions.drawing_utils
+hands = mp_hands.Hands(
+    max_num_hands=2,
+    min_detection_confidence=0.7,
+    min_tracking_confidence=0.7
+)
+
+
 FRAME_HEIGHT = 480
 FRAME_WIDTH = 640
 
@@ -21,6 +34,18 @@ def capture_photo(frame, photo_count):
     cv.imwrite(photo_path, frame)
     print(f"Photo saved: {photo_path}")
 
+def recognize_hand(frame):
+    """Detects hands using MediaPipe and draws landmarks."""
+    rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+    results = hands.process(rgb_frame)
+    
+    if results.multi_hand_landmarks:
+        for hand_landmarks in results.multi_hand_landmarks:
+            mp_drawing.draw_landmarks(
+                frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+        return True  # At least one hand detected
+    return False  # No hand detected
+
 def cam():
     """Handles the camera feed and user interaction."""
     photo_count = 0
@@ -36,7 +61,10 @@ def cam():
 
         frame = cv.flip(frame, 1)
         h, w = frame.shape[:2]
-        
+
+        # Detect and draw hands
+        hand_detected = recognize_hand(frame)
+
         if timer_active:
             elapsed = time.time() - timer_start
             remaining = max(0, countdown - int(elapsed))
@@ -78,9 +106,10 @@ def cam():
                 countdown = selected_countdown
                 timer_active = True
                 timer_start = time.time()
-    
+
     capture.release()
     cv.destroyAllWindows()
+
 
 if __name__ == "__main__":
     cam()
